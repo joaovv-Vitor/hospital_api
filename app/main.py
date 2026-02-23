@@ -3,47 +3,40 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 
-# Importando as configurações do banco que criamos
 from app.db.database import engine, Base, get_db
+import app.models 
 
-# Gerenciador de ciclo de vida da aplicação (Lifespan)
+# 1. Importar o nosso novo router central
+from app.api.routes import api_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- O que acontece ao INICIAR a API ---
-    print("⏳ Conectando ao banco de dados e criando tabelas...")
+    print("⏳ A conectar à base de dados e a criar tabelas...")
     async with engine.begin() as conn:
-        # Cria todas as tabelas registradas na Base (útil para desenvolvimento)
         await conn.run_sync(Base.metadata.create_all)
-    print("✅ Banco de dados pronto!")
-    
-    yield # Aqui a API fica rodando e recebendo requisições
-    
-    # --- O que acontece ao DESLIGAR a API ---
-    print("🛑 Encerrando conexão com o banco de dados...")
+    print("✅ Base de dados pronta!")
+    yield 
+    print("🛑 A encerrar a ligação com a base de dados...")
     await engine.dispose()
 
-# Inicializando o FastAPI com o lifespan
 app = FastAPI(
     title="API Sistema Hospitalar",
-    description="API para gerenciamento de pacientes, médicos e consultas.",
+    description="API para gestão de pacientes, médicos e consultas.",
     version="1.0.0",
     lifespan=lifespan
 )
+
+# ⚠️ REGISTRO DAS ROTAS (Crucial para o Swagger funcionar)
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
     return {"mensagem": "Bem-vindo à API do Sistema Hospitalar!"}
 
-# Rota de teste para verificar se o FastAPI consegue falar com o Postgres
 @app.get("/health", tags=["Health Check"])
 async def check_db_connection(db: AsyncSession = Depends(get_db)):
     try:
-        # Faz uma consulta simples no banco
         result = await db.execute(text("SELECT 1"))
-        return {
-            "status": "online", 
-            "banco_de_dados": "conectado",
-            "resultado_query": result.scalar()
-        }
+        return {"status": "online", "banco_de_dados": "conectado"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao conectar no banco: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro na base de dados: {str(e)}")

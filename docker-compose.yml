@@ -1,0 +1,17 @@
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hospital_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: banco123 # Mesma senha que colocamos no .env
+      POSTGRES_DB: hospital_db
+    ports:
+      - "5432:5432" # Mapeia a porta do contêiner para a sua máquina
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Garante que os dados não sumam se o contêiner for reiniciado
+
+volumes:
+  postgres_data:

@@ -1,6 +1,6 @@
-def main():
-    print("Hello from hospital-api!")
+from fastapi import FastAPI
+from app.api.router import api_router
 
+app = FastAPI(title="Hospital API")
 
-if __name__ == "__main__":
-    main()
+app.include_router(api_router)

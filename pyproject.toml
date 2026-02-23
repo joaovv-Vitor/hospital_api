@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
     "fastapi>=0.131.0",
+    "jose>=1.0.0",
     "passlib[bcrypt]>=1.7.4",
     "pydantic-settings>=2.13.1",
     "python-jose>=3.5.0",

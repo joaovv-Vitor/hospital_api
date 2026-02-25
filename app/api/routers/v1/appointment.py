@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from datetime import date
@@ -6,7 +6,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 
 from app.db.database import get_db
-from app.schemas.appointment import AppointmentCreate, AppointmentResponse
+from app.schemas.appointment import AppointmentCreate, AppointmentResponse, AppointmentStatusUpdate
 from app.services import appointment as appointment_service
 from app.api.deps import check_role
 
@@ -39,3 +39,37 @@ async def list_appointments(
     - Use 'date_filter' (YYYY-MM-DD) para buscar a agenda de um dia específico.
     """
     return await appointment_service.get_appointments(db, current_user, date_filter)
+
+@router.patch(
+    "/{appointment_id}/status", 
+    response_model=AppointmentResponse,
+    summary="Atualiza o status de uma consulta médica",
+    response_description="A consulta atualizada com o novo status."
+)
+async def update_status(
+    appointment_id: int,
+    status_in: AppointmentStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Altera o estado do ciclo de vida de uma consulta (Appointment) no sistema.
+    
+    **Regras de Negócio e Transições de Status:**
+    * scheduled: Consulta agendada (padrão ao criar).
+    * completed: Consulta realizada com sucesso pelo médico.
+    * canceled: Consulta desmarcada pelo paciente ou pela clínica.
+
+    **Controle de Acesso (RBAC):**
+    * **Médicos (Doctors)**: Geralmente utilizam este endpoint para marcar a consulta como completed após o atendimento.
+    * **Atendentes (Attendants)** / Admins: Utilizam para marcar como canceled caso o paciente ligue desmarcando.
+    
+    Apenas usuários autenticados com as roles acima têm permissão para realizar esta operação.
+    """
+    if current_user.role not in ["admin", "attendant", "doctor"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Você não tem permissão para alterar o status de consultas."
+        )
+
+    return await appointment_service.update_appointment_status(db, appointment_id, status_in)

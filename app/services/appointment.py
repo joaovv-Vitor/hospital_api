@@ -10,7 +10,7 @@ from typing import List
 from app.models.appointment import Appointment
 from app.models.patient import Patient
 from app.models.doctor import Doctor
-from app.schemas.appointment import AppointmentCreate
+from app.schemas.appointment import AppointmentCreate, AppointmentStatusUpdate
 
 async def create_appointment(db: AsyncSession, appointment_in: AppointmentCreate) -> Appointment:
     #limpar fuso
@@ -91,3 +91,30 @@ async def get_appointments(
     # Executa a query final
     result = await db.execute(query)
     return list(result.scalars().all())
+
+async def update_appointment_status(
+    db: AsyncSession, 
+    appointment_id: int, 
+    status_update: AppointmentStatusUpdate
+) -> Appointment:
+    
+    # 1. Busca a consulta no banco de dados
+    query = select(Appointment).where(Appointment.id == appointment_id)
+    result = await db.execute(query)
+    db_appointment = result.scalars().first()
+
+    # 2. Se não existir, retorna erro 404
+    if not db_appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Consulta não encontrada."
+        )
+
+    # 3. Atualiza apenas o campo de status
+    db_appointment.status = status_update.status
+    
+    # 4. Salva no banco de dados
+    await db.commit()
+    await db.refresh(db_appointment)
+
+    return db_appointment

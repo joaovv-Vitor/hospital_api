@@ -20,3 +20,6 @@ class AppointmentResponse(AppointmentBase):
     status: AppointmentStatus
 
     model_config = ConfigDict(from_attributes=True)
+
+class AppointmentStatusUpdate(BaseModel):
+    status: AppointmentStatus

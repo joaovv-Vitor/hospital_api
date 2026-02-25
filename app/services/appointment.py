@@ -2,6 +2,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from datetime import timezone
+from datetime import date
+from sqlalchemy import cast, Date
+from app.models.user import User
+from typing import List
 
 from app.models.appointment import Appointment
 from app.models.patient import Patient
@@ -52,3 +56,38 @@ async def create_appointment(db: AsyncSession, appointment_in: AppointmentCreate
     await db.refresh(db_appointment)
     
     return db_appointment
+
+async def get_appointments(
+    db: AsyncSession, 
+    current_user: User, 
+    date_filter: date | None = None
+) -> List[Appointment]:
+    
+    # Começamos com uma query básica que seleciona todas as consultas
+    query = select(Appointment)
+
+    # 1. Filtro de Segurança por Role: O Médico só vê as próprias consultas
+    if current_user.role == "doctor":
+        # Primeiro, descobrimos qual é o perfil de médico atrelado a este login
+        doctor_query = select(Doctor).where(Doctor.user_id == current_user.id)
+        doctor_result = await db.execute(doctor_query)
+        doctor = doctor_result.scalars().first()
+
+        # Se por algum erro bizarro o médico não tiver perfil, não retorna nada
+        if not doctor:
+            return []
+
+        # Filtra as consultas pela ID do médico
+        query = query.where(Appointment.doctor_id == doctor.id)
+
+    # 2. Filtro de Data (Usado pela recepção para ver "a agenda de hoje")
+    if date_filter:
+        # cast(...) transforma o DateTime do banco em apenas Date para comparar corretamente
+        query = query.where(cast(Appointment.appointment_date, Date) == date_filter)
+
+    # 3. Ordenação: Mostra as consultas mais próximas primeiro
+    query = query.order_by(Appointment.appointment_date)
+
+    # Executa a query final
+    result = await db.execute(query)
+    return list(result.scalars().all())

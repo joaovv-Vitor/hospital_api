@@ -15,8 +15,6 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
-    
-    # Nunca guardamos a palavra-passe em texto limpo, sempre um hash (criptografia)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     
     # Atribuímos o tipo Enum à coluna para garantir que só aceita os 3 perfis definidos
@@ -24,3 +22,7 @@ class User(Base):
     
     # Útil para o administrador desativar a conta de um médico ou atendente que saiu do hospital
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    cpf: Mapped[str] = mapped_column(String(11), unique=True, index=True, nullable=False)
+    address: Mapped[str] = mapped_column(String(255), nullable=True)

@@ -27,7 +27,10 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
         email=user_in.email,
         hashed_password=hashed_password,
         role=user_in.role,
-        is_active=user_in.is_active
+        is_active=user_in.is_active,
+        name=user_in.name,      
+        cpf=user_in.cpf,         
+        address=user_in.address  
     )
 
     # 4. Salva no banco de dados
